@@ -1,9 +1,18 @@
 {
   "name": "token-weather",
-  "version": "0.1.0",
-  "description": "A live weather forecast of your context window, shown above the prompt",
+  "version": "0.2.0",
+  "description": "A live forecast of your context window, shown above the prompt, in the analogy you pick",
   "types": "./types/index.d.ts",
   "author": {
     "name": "Patric Stahel"
+  },
+  "userConfig": {
+    "analogy": {
+      "type": "string",
+      "title": "Analogy",
+      "description": "How the band pictures the context fill: weather, moon, hearts, fuel, pot, tide, daytime or volcano",
+      "default": "weather",
+      "options": ["weather", "moon", "hearts", "fuel", "pot", "tide", "daytime", "volcano"]
+    }
   }
 }

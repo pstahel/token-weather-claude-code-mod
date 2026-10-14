@@ -39,3 +39,33 @@ test('the band stays out of the way before the first turn', async ($, on) => {
   expect(await ui.find({ key: 'token-weather' })).toBeUndefined()
   await ui.unmount()
 })
+
+test('the band speaks the chosen analogy', { options: { analogy: 'moon' } }, async ($, on) => {
+  on('session.usage', () => ({
+    value: { startedAt: 0, rateLimits: [], context: { tokens: 134400, window: 200000 } },
+  }))
+  on('turn.complete', () => ({ text: '' }))
+  on('ui.render', () => ({ type: 'Box', props: {}, children: [] }))
+
+  await $.turn.complete(TURN)
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ plugin: 'token-weather', surface, ...BAND })
+    const line = await ui.find({ key: 'token-weather' })
+    expect(line?.text).toBe('◑ Half moon67%134.4k / 200k◑▲ +134.4k last turn')
+    await ui.unmount()
+  }
+})
+
+test('/token-weather lists the analogies and refuses unknown ones', async ($, on) => {
+  on('command.run', () => ({ text: '' }))
+  // the test kit fills the engine-stamped fields (origin, presentation)
+  const run = (args: string) =>
+    $.command.run({ command: 'token-weather', args } as Parameters<typeof $.command.run>[0])
+
+  const { text } = await run('')
+  expect(text).toContain('› weather')
+  expect(text).toContain('moon')
+  const bad = await run('sauna')
+  expect(bad.text).toContain('Unknown analogy "sauna"')
+})
