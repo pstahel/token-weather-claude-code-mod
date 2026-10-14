@@ -41,13 +41,13 @@ export const register: Register = on => {
 
     return (
       <Box key="token-weather" flexDirection="row" gap={2}>
-        <Text color={sky.color} weight="semibold">
+        <Text color={sky.color} bold>
           {sky.icon} {sky.word}
         </Text>
-        <Text weight="semibold" tabular>
+        <Text bold>
           {Math.floor(pct)}%
         </Text>
-        <Text dimColor tabular>
+        <Text dimColor>
           {fmt(now.tokens)} / {fmt(now.window)}
         </Text>
         <Text>
@@ -60,7 +60,7 @@ export const register: Register = on => {
             )
           })}
         </Text>
-        <Text dimColor tabular>
+        <Text dimColor>
           {deltaText(delta(rs))}
         </Text>
       </Box>
