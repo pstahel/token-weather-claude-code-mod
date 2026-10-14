@@ -1,21 +1,11 @@
 import { atom, read, update } from 'claude-code'
 import type { Register, SessionUsage, StateDollar } from 'claude-code'
 
-import {
-  DEFAULT_ANALOGY,
-  HISTORY,
-  analogyFor,
-  barFor,
-  delta,
-  deltaText,
-  fmt,
-  isAnalogy,
-  percentOf,
-  push,
-  skyFor,
-} from './forecast'
+import { analogyOf, push } from './forecast'
 import { SETTINGS, parseCommand, settingsListing } from './command'
-import { CACHE_COLORS, cacheCompact, cacheFull, cacheModeOf, cacheReadingOf, cacheView, ttlOf } from './cache'
+import { cacheModeOf, cacheReadingOf, cacheView, ttlOf } from './cache'
+import { cacheRow, cacheSegment, forecastRow } from './band'
+import { langOf } from './i18n'
 
 const readings = atom({ plugin: 'token-weather', key: 'readings' } as const, [])
 const cache = atom({ plugin: 'token-weather', key: 'cache' } as const, null)
@@ -31,8 +21,8 @@ async function takeReading($: StateDollar & { session: { usage: () => Promise<Se
 }
 
 export const register: Register = (on, options) => {
-  const currentAnalogy = isAnalogy(options.analogy) ? options.analogy : DEFAULT_ANALOGY
-  const analogy = analogyFor(currentAnalogy)
+  const analogy = analogyOf(options.analogy)
+  const lang = langOf(options.language)
   const cacheMode = cacheModeOf(options.cache)
   const ttl = ttlOf(options.cacheTtl)
 
@@ -41,8 +31,8 @@ export const register: Register = (on, options) => {
     await $.command
       .register({
         name: 'token-weather',
-        description: 'token-weather settings: analogy, cache row and cache lifetime',
-        argumentHint: '[analogy | cache full|compact|off | ttl 1h|5m]',
+        description: 'token-weather settings: analogy, cache row, cache lifetime and language',
+        argumentHint: '[analogy | cache full|compact|off | ttl 1h|5m | lang en|de|es|it|fr]',
       })
       .catch(() => {}) // the band works without the command
     if (cacheMode !== 'off') $.clock.every(TICK_MS, () => update($, tick, n => n + 1))
@@ -68,9 +58,9 @@ export const register: Register = (on, options) => {
     return result
   })
 
-  // `/token-weather` lists the settings; `/token-weather moon`, `cache compact`, `ttl 5m` change one.
+  // `/token-weather` lists the settings; `/token-weather moon`, `cache compact`, `ttl 5m`, `de` change one.
   on('command.run', { command: 'token-weather' }, async ($, e) => {
-    const current = { analogy: currentAnalogy, cache: cacheMode, ttl }
+    const current = { analogy, cache: cacheMode, ttl, lang }
     const parsed = parseCommand(e.args ?? '')
     if (parsed.kind === 'list') return { text: settingsListing(current) }
     if (parsed.kind === 'error') return { text: parsed.text }
@@ -95,9 +85,7 @@ export const register: Register = (on, options) => {
     if (!now) return next(e)
 
     const { Box, Text } = $.ui.resolve(e)
-    const pct = percentOf(now)
-    const sky = skyFor(pct, analogy)
-    const recent = rs.slice(-HISTORY)
+    const f = forecastRow(rs, analogy, lang)
 
     const c = cacheMode === 'off' ? null : await read($, cache)
     await read($, tick) // redraw on the timer, so the countdown moves
@@ -106,49 +94,40 @@ export const register: Register = (on, options) => {
 
     const forecast = (
       <Box key="token-weather" flexDirection="row" gap={2}>
-        <Text color={sky.color} bold>
-          {sky.icon} {sky.word}
+        <Text color={f.color} bold>
+          {f.head}
         </Text>
-        <Text bold>
-          {Math.floor(pct)}%
-        </Text>
-        <Text dimColor>
-          {fmt(now.tokens)} / {fmt(now.window)}
-        </Text>
+        <Text bold>{f.pct}</Text>
+        <Text dimColor>{f.tokens}</Text>
         <Text>
-          {recent.map((r, i) => {
-            const p = percentOf(r)
-            return (
-              <Text key={`bar-${i}`} color={skyFor(p, analogy).color}>
-                {barFor(p, analogy)}
-              </Text>
-            )
-          })}
+          {f.bars.map((b, i) => (
+            <Text key={`bar-${i}`} color={b.color}>
+              {b.glyph}
+            </Text>
+          ))}
         </Text>
-        <Text dimColor>
-          {deltaText(delta(rs))}
-        </Text>
+        <Text dimColor>{f.delta}</Text>
+        <Text dimColor>{f.range}</Text>
         {view && !isFull ? (
-          <Text key="token-weather-cache" color={CACHE_COLORS[view.state]}>
-            {cacheCompact(view, now.tokens)}
+          <Text key="token-weather-cache" color={cacheRow(view, now.tokens, analogy, lang).color}>
+            {cacheSegment(view, analogy, lang)}
           </Text>
         ) : null}
       </Box>
     )
     if (!view || !isFull) return forecast
 
-    const row = cacheFull(view, now.tokens)
-    const color = CACHE_COLORS[view.state]
+    const row = cacheRow(view, now.tokens, analogy, lang)
     return (
       <Box key="token-weather-band" flexDirection="column">
         {forecast}
         <Box key="token-weather-cache" flexDirection="row" gap={2}>
-          <Text color={color} bold>
+          <Text color={row.color} bold>
             {row.head}
           </Text>
+          <Text color={row.color}>{row.meter}</Text>
           <Text dimColor>{row.size}</Text>
-          <Text color={color}>{row.meter}</Text>
-          <Text dimColor>{row.time}</Text>
+          {row.time ? <Text dimColor>{row.time}</Text> : null}
         </Box>
       </Box>
     )

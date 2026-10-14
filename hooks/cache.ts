@@ -1,5 +1,4 @@
 import type { CacheReading } from '../types'
-import { fmt } from './forecast'
 
 export type CacheMode = 'off' | 'compact' | 'full'
 export const CACHE_MODES: readonly CacheMode[] = ['full', 'compact', 'off']
@@ -60,24 +59,5 @@ export const CACHE_COLORS = { warm: 'green', cooling: 'yellow', cold: 'red' } as
 
 export const meterFor = (left: number) => {
   const full = Math.round(left * METER)
-  return '█'.repeat(full) + '░'.repeat(METER - full)
-}
-
-/** Variant A: one short segment appended to the forecast row. */
-export function cacheCompact(v: CacheView, context: number): string {
-  if (v.state === 'cold') return `❄ cache cold · next turn rewrites ${fmt(context)}`
-  return `⧗ ${fmt(v.cached)} cached · ${v.minsLeft} min`
-}
-
-/** Variant B: the pieces of the cache row under the forecast. */
-export function cacheFull(v: CacheView, context: number) {
-  if (v.state === 'cold') {
-    return { head: '❄ Cache cold', size: `next turn rewrites ${fmt(context)}`, meter: meterFor(0), time: `0 of ${v.ttlMins} min left` }
-  }
-  return {
-    head: '⧗ Cache',
-    size: `${fmt(v.cached)} (${v.hitPct}% hit)`,
-    meter: meterFor(v.left),
-    time: `${v.minsLeft} of ${v.ttlMins} min left`,
-  }
+  return '▰'.repeat(full) + '▱'.repeat(METER - full)
 }

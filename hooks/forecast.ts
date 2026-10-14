@@ -2,96 +2,88 @@ import type { Reading } from '../types'
 
 export const HISTORY = 12
 const BARS = '▁▂▃▄▅▆▇█'
+/** How many recent turns the range averages over. */
+const RANGE_TURNS = 5
+const RANGE_MAX = 99
 
-/** One step of an analogy: what the band shows while the fill is in its range. */
-export type Sky = { icon: string; word: string; color: string }
+type Five<T> = readonly [T, T, T, T, T]
 
-/** An analogy: five steps over the shared thresholds, and how a past turn is charted. */
-export type Analogy = { steps: [Sky, Sky, Sky, Sky, Sky]; chart: 'bars' | 'steps' }
+/**
+ * An analogy's look, the same in every language (the words are in i18n.ts):
+ * five steps over the shared thresholds, whether it counts what is used or what
+ * is left, how a past turn is charted, and the gauge it gives the prompt cache.
+ */
+export type Analogy = {
+  icons: Five<string>
+  colors: Five<string>
+  /** `left` shows what remains (a fuel gauge, hit points); `used` what is taken. */
+  counts: 'used' | 'left'
+  chart: 'bars' | 'steps'
+  cacheIcon: string
+  /** Labels at the ends of the cache meter, cold first. */
+  scale?: readonly [string, string]
+}
 
-/** Upper bounds (in % of the window) of the first four steps; the fifth takes the rest. */
+/** Upper bounds (in % of the window used) of the first four steps; the fifth takes the rest. */
 const THRESHOLDS = [25, 50, 75, 90]
 
 export const ANALOGIES = {
   weather: {
+    icons: ['☀', '☁', '☂', '☇', '↯'],
+    colors: ['yellow', 'cyan', 'blue', 'magenta', 'red'],
+    counts: 'used',
     chart: 'bars',
-    steps: [
-      { icon: '☀', word: 'Clear', color: 'yellow' },
-      { icon: '☁', word: 'Cloudy', color: 'cyan' },
-      { icon: '☂', word: 'Showers', color: 'blue' },
-      { icon: '☇', word: 'Storm', color: 'magenta' },
-      { icon: '↯', word: 'Compact soon', color: 'red' },
-    ],
+    cacheIcon: '°',
   },
   moon: {
+    icons: ['○', '◔', '◑', '◕', '●'],
+    colors: ['gray', 'cyan', 'blue', 'magenta', 'red'],
+    counts: 'used',
     chart: 'steps',
-    steps: [
-      { icon: '○', word: 'New moon', color: 'gray' },
-      { icon: '◔', word: 'Waxing', color: 'cyan' },
-      { icon: '◑', word: 'Half moon', color: 'blue' },
-      { icon: '◕', word: 'Gibbous', color: 'magenta' },
-      { icon: '●', word: 'Full moon, compact soon', color: 'red' },
-    ],
+    cacheIcon: '✧',
   },
   hearts: {
+    icons: ['♥♥♥♥♥', '♥♥♥♥♡', '♥♥♥♡♡', '♥♥♡♡♡', '♥♡♡♡♡'],
+    colors: ['green', 'green', 'yellow', 'magenta', 'red'],
+    counts: 'left',
     chart: 'bars',
-    steps: [
-      { icon: '♥♥♥♥♥', word: 'Full health', color: 'green' },
-      { icon: '♥♥♥♥♡', word: 'Scratched', color: 'green' },
-      { icon: '♥♥♥♡♡', word: 'Wounded', color: 'yellow' },
-      { icon: '♥♥♡♡♡', word: 'Critical', color: 'magenta' },
-      { icon: '♥♡♡♡♡', word: 'Low HP, /compact to heal', color: 'red' },
-    ],
+    cacheIcon: '✦',
   },
   fuel: {
+    icons: ['▰▰▰▰▰', '▰▰▰▰▱', '▰▰▰▱▱', '▰▰▱▱▱', '▰▱▱▱▱'],
+    colors: ['green', 'green', 'yellow', 'magenta', 'red'],
+    counts: 'left',
     chart: 'bars',
-    steps: [
-      { icon: '▰▰▰▰▰', word: 'Full tank', color: 'green' },
-      { icon: '▰▰▰▰▱', word: 'Three quarters', color: 'green' },
-      { icon: '▰▰▰▱▱', word: 'Half tank', color: 'yellow' },
-      { icon: '▰▰▱▱▱', word: 'Reserve', color: 'magenta' },
-      { icon: '▰▱▱▱▱', word: 'Refuel, /compact', color: 'red' },
-    ],
+    cacheIcon: '♨',
+    scale: ['C', 'H'],
   },
   pot: {
+    icons: ['·', '~', '≈', '≋', '‼'],
+    colors: ['blue', 'cyan', 'yellow', 'magenta', 'red'],
+    counts: 'used',
     chart: 'bars',
-    steps: [
-      { icon: '·', word: 'Cold', color: 'blue' },
-      { icon: '~', word: 'Warm', color: 'cyan' },
-      { icon: '≈', word: 'Simmering', color: 'yellow' },
-      { icon: '≋', word: 'Boiling', color: 'magenta' },
-      { icon: '‼', word: 'Boiling over', color: 'red' },
-    ],
+    cacheIcon: '♨',
   },
   tide: {
+    icons: ['_', '~', '≈', '≋', '↟'],
+    colors: ['cyan', 'cyan', 'blue', 'magenta', 'red'],
+    counts: 'used',
     chart: 'bars',
-    steps: [
-      { icon: '_', word: 'Low tide', color: 'cyan' },
-      { icon: '~', word: 'Calm', color: 'cyan' },
-      { icon: '≈', word: 'Swell', color: 'blue' },
-      { icon: '≋', word: 'Surf', color: 'magenta' },
-      { icon: '↟', word: 'Storm surge', color: 'red' },
-    ],
+    cacheIcon: '☼',
   },
   daytime: {
+    icons: ['☼', '☀', '◐', '☾', '✦'],
+    colors: ['yellow', 'yellow', 'cyan', 'blue', 'red'],
+    counts: 'used',
     chart: 'bars',
-    steps: [
-      { icon: '☼', word: 'Morning', color: 'yellow' },
-      { icon: '☀', word: 'Noon', color: 'yellow' },
-      { icon: '◐', word: 'Afternoon', color: 'cyan' },
-      { icon: '☾', word: 'Evening', color: 'blue' },
-      { icon: '✦', word: 'Midnight, time to compact', color: 'red' },
-    ],
+    cacheIcon: '♨',
   },
   volcano: {
+    icons: ['▲', '▲', '▲', '▲', '✸'],
+    colors: ['green', 'yellow', 'yellow', 'magenta', 'red'],
+    counts: 'used',
     chart: 'bars',
-    steps: [
-      { icon: '▲', word: 'Dormant', color: 'green' },
-      { icon: '▲', word: 'Rumbling', color: 'yellow' },
-      { icon: '▲', word: 'Smoking', color: 'yellow' },
-      { icon: '▲', word: 'Glowing', color: 'magenta' },
-      { icon: '✸', word: 'Eruption, compact now', color: 'red' },
-    ],
+    cacheIcon: '◉',
   },
 } as const satisfies Record<string, Analogy>
 
@@ -102,18 +94,16 @@ export const ANALOGY_NAMES = Object.keys(ANALOGIES) as AnalogyName[]
 export const isAnalogy = (name: unknown): name is AnalogyName =>
   typeof name === 'string' && Object.hasOwn(ANALOGIES, name)
 
-export const analogyFor = (name: unknown): Analogy =>
-  ANALOGIES[isAnalogy(name) ? name : DEFAULT_ANALOGY]
+export const analogyOf = (name: unknown): AnalogyName => (isAnalogy(name) ? name : DEFAULT_ANALOGY)
 
+/** Share of the window used, 0–100. */
 export const percentOf = (r: Reading) => Math.min(100, (r.tokens / r.window) * 100)
 
-const stepOf = (pct: number) => {
+/** Which of the five steps a fill (in % used) is in, 0–4. */
+export const stepOf = (pct: number) => {
   const i = THRESHOLDS.findIndex(t => pct < t)
   return i === -1 ? THRESHOLDS.length : i
 }
-
-export const skyFor = (pct: number, analogy: Analogy = ANALOGIES[DEFAULT_ANALOGY]): Sky =>
-  analogy.steps[stepOf(pct)]!
 
 export function fmt(n: number): string {
   if (n >= 1e6) return `${+(n / 1e6).toFixed(1)}M`
@@ -121,15 +111,17 @@ export function fmt(n: number): string {
   return String(n)
 }
 
-/** One past turn in the chart: a bar, or the analogy's own step glyph (moon phases). */
-export function barFor(pct: number, analogy: Analogy = ANALOGIES[DEFAULT_ANALOGY]): string {
-  if (analogy.chart === 'steps') return skyFor(pct, analogy).icon
-  return BARS[Math.min(7, Math.floor(pct / 12.5))]!
+/** One past turn in the chart: a bar of what the analogy counts, or its step glyph (moon phases). */
+export function barFor(pct: number, a: Analogy): string {
+  if (a.chart === 'steps') return a.icons[stepOf(pct)]!
+  const shown = a.counts === 'left' ? 100 - pct : pct
+  return BARS[Math.min(7, Math.floor(shown / 12.5))]!
 }
 
 /** Keeps the last HISTORY turns plus one more, so the oldest bar still has a delta. */
 export const push = (readings: Reading[], r: Reading) => [...readings, r].slice(-(HISTORY + 1))
 
+/** Tokens the last turn added (negative after a /compact). */
 export function delta(readings: Reading[]): number {
   const last = readings[readings.length - 1]
   if (!last) return 0
@@ -137,6 +129,24 @@ export function delta(readings: Reading[]): number {
   return last.tokens - (prev ? prev.tokens : 0)
 }
 
-export function deltaText(d: number): string {
-  return d >= 0 ? `▲ +${fmt(d)} last turn` : `▼ −${fmt(-d)} last turn`
+/** The last turn's delta, signed the way the analogy counts: a fuel gauge drops as tokens are used. */
+export function deltaText(d: number, a: Analogy, last: string): string {
+  const isRise = a.counts === 'left' ? d < 0 : d >= 0
+  return `${isRise ? '▲ +' : '▼ −'}${fmt(Math.abs(d))} ${last}`
+}
+
+/**
+ * How many more turns fit in the window at the recent pace: the room left over the
+ * average growth of the last few turns, /compacts left out. Undefined until two turns grew.
+ */
+export function rangeOf(readings: Reading[]): number | undefined {
+  const growth: number[] = []
+  for (let i = readings.length - 1; i > 0 && growth.length < RANGE_TURNS; i--) {
+    const d = readings[i]!.tokens - readings[i - 1]!.tokens
+    if (d > 0) growth.push(d)
+  }
+  const now = readings[readings.length - 1]
+  if (!now || growth.length < 2) return undefined
+  const pace = growth.reduce((s, d) => s + d, 0) / growth.length
+  return Math.min(RANGE_MAX, Math.floor(Math.max(0, now.window - now.tokens) / pace))
 }
