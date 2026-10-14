@@ -26,7 +26,7 @@ The second row shows the prompt cache as the last main-thread API request left i
 
 A cold cache means the next prompt writes the whole context to the cache again, which costs more; a `/compact` first can be worth it. Subagents keep caches of their own and are not counted. The row appears after the first response.
 
-Claude Code does not tell a mod how long its cache lives, so the lifetime is a setting (`cacheTtl`, `1h` by default, or `5m`).
+Claude Code does not tell a mod how long its cache lives, so the lifetime is a setting (`cacheTtl`, `1h` by default, or `5m`; `/token-weather ttl 5m` switches it).
 
 ## Analogies
 
@@ -55,7 +55,7 @@ Weather is the default. Seven more analogies picture the same five steps:
 At the prompt, in the terminal or the desktop app:
 
 ```
-/token-weather          # list the analogies, the current one marked ›
+/token-weather          # list every setting and the analogies, current values marked ›
 /token-weather moon     # switch to moon
 ```
 
@@ -71,7 +71,18 @@ In a terminal session the setting is also a picker in `/config` (**Analogy**, un
 | `cache` | `full` `compact` `off` | `full` | The cache as its own row, as a short segment on the forecast row (`⧗ 128.1k cached · 42 min`), or not at all |
 | `cacheTtl` | `1h` `5m` | `1h` | How long the cache lives after each request |
 
-Set them in `/config` in a terminal session, or in `~/.claude/settings.json`. The key is the plugin's id: `token-weather@token-weather` when installed from this marketplace, `token-weather@inline` when loaded from a folder with `--plugin-dir`:
+Change any of them at the prompt, in the terminal or the desktop app:
+
+```
+/token-weather                 # show every setting, current values marked ›
+/token-weather moon            # analogy (or: /token-weather analogy moon)
+/token-weather cache compact   # cache row: full, compact or off (or just: /token-weather compact)
+/token-weather ttl 5m          # cache lifetime: 1h or 5m (or just: /token-weather 5m)
+```
+
+The band reloads with the new value right away, and it is kept for later sessions.
+
+Or set them in `/config` in a terminal session, or in `~/.claude/settings.json`. The key is the plugin's id: `token-weather@token-weather` when installed from this marketplace, `token-weather@inline` when loaded from a folder with `--plugin-dir`:
 
 ```json
 "pluginConfigs": {
@@ -106,4 +117,4 @@ claude plugin validate .
 claude plugin test .
 ```
 
-To try changes live, load the folder as a dev plugin: `claude --plugin-dir .` in a terminal; the session reloads the mod whenever a file changes. The cache row lives in `hooks/cache.ts`. Analogies live in `hooks/forecast.ts` (`ANALOGIES`); a new one also goes into `userConfig.analogy.options` in `.claude-plugin/plugin.json`.
+To try changes live, load the folder as a dev plugin: `claude --plugin-dir .` in a terminal; the session reloads the mod whenever a file changes. The cache row lives in `hooks/cache.ts`, the `/token-weather` arguments in `hooks/command.ts`. Analogies live in `hooks/forecast.ts` (`ANALOGIES`); a new one also goes into `userConfig.analogy.options` in `.claude-plugin/plugin.json`.

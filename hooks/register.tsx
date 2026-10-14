@@ -2,8 +2,6 @@ import { atom, read, update } from 'claude-code'
 import type { Register, SessionUsage, StateDollar } from 'claude-code'
 
 import {
-  ANALOGIES,
-  ANALOGY_NAMES,
   DEFAULT_ANALOGY,
   HISTORY,
   analogyFor,
@@ -16,6 +14,7 @@ import {
   push,
   skyFor,
 } from './forecast'
+import { SETTINGS, parseCommand, settingsListing } from './command'
 import { CACHE_COLORS, cacheCompact, cacheFull, cacheModeOf, cacheReadingOf, cacheView, ttlOf } from './cache'
 
 const readings = atom({ plugin: 'token-weather', key: 'readings' } as const, [])
@@ -31,18 +30,9 @@ async function takeReading($: StateDollar & { session: { usage: () => Promise<Se
   await update($, readings, rs => push(rs, reading))
 }
 
-const COMMAND = 'token-weather'
-
-/** Each analogy with its five steps, the current one marked. */
-const listing = (current: string) =>
-  ANALOGY_NAMES.map(name => {
-    const steps = ANALOGIES[name].steps.map(s => s.icon).join('  ')
-    return `${name === current ? '›' : ' '} ${name.padEnd(8)} ${steps}`
-  }).join('\n')
-
 export const register: Register = (on, options) => {
-  const current = isAnalogy(options.analogy) ? options.analogy : DEFAULT_ANALOGY
-  const analogy = analogyFor(current)
+  const currentAnalogy = isAnalogy(options.analogy) ? options.analogy : DEFAULT_ANALOGY
+  const analogy = analogyFor(currentAnalogy)
   const cacheMode = cacheModeOf(options.cache)
   const ttl = ttlOf(options.cacheTtl)
 
@@ -51,8 +41,8 @@ export const register: Register = (on, options) => {
     await $.command
       .register({
         name: 'token-weather',
-        description: `Switch the token-weather analogy: ${ANALOGY_NAMES.join(', ')}`,
-        argumentHint: '[analogy]',
+        description: 'token-weather settings: analogy, cache row and cache lifetime',
+        argumentHint: '[analogy | cache full|compact|off | ttl 1h|5m]',
       })
       .catch(() => {}) // the band works without the command
     if (cacheMode !== 'off') $.clock.every(TICK_MS, () => update($, tick, n => n + 1))
@@ -78,22 +68,23 @@ export const register: Register = (on, options) => {
     return result
   })
 
-  // `/token-weather` lists the analogies, `/token-weather moon` switches to one.
+  // `/token-weather` lists the settings; `/token-weather moon`, `cache compact`, `ttl 5m` change one.
   on('command.run', { command: 'token-weather' }, async ($, e) => {
-    const name = (e.args ?? '').trim().toLowerCase()
-    if (!name) return { text: `Analogies (switch with /${COMMAND} <name>):\n${listing(current)}` }
-    if (!isAnalogy(name)) {
-      return { text: `Unknown analogy "${name}". Pick one of: ${ANALOGY_NAMES.join(', ')}` }
-    }
-    if (name === current) return { text: `token-weather already shows ${name}.` }
+    const current = { analogy: currentAnalogy, cache: cacheMode, ttl }
+    const parsed = parseCommand(e.args ?? '')
+    if (parsed.kind === 'list') return { text: settingsListing(current) }
+    if (parsed.kind === 'error') return { text: parsed.text }
 
+    const { setting, value } = parsed
+    if (current[setting] === value) return { text: `token-weather ${setting} is already ${value}.` }
+    const { field } = SETTINGS[setting]
     const row = (await $.config.list()).find(
-      r => r.key.startsWith('token-weather') && r.key.endsWith('.analogy'),
+      r => r.key.startsWith('token-weather') && r.key.endsWith(`.${field}`),
     )
-    if (!row) return { text: 'token-weather: the analogy setting was not found in /config.' }
-    const { deny } = await $.config.set({ key: row.key, value: name })
-    if (deny) return { text: `token-weather: could not switch to ${name}: ${deny}` }
-    return { text: `token-weather now shows ${name}.` }
+    if (!row) return { text: `token-weather: the ${setting} setting was not found in /config.` }
+    const { deny } = await $.config.set({ key: row.key, value })
+    if (deny) return { text: `token-weather: could not set ${setting} to ${value}: ${deny}` }
+    return { text: `token-weather ${setting} is now ${value}.` }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {

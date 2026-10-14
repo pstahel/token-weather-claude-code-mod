@@ -57,17 +57,39 @@ test('the band speaks the chosen analogy', { options: { analogy: 'moon' } }, asy
   }
 })
 
-test('/token-weather lists the analogies and refuses unknown ones', async ($, on) => {
+test('/token-weather lists the settings and changes one', async ($, on) => {
+  const rows = ['analogy', 'cache', 'cacheTtl'].map(f => ({
+    key: `token-weather@inline.${f}`, label: f, kind: 'choice', value: '', provider: { plugin: 'token-weather', tier: 'user' }, isLocked: false,
+  }))
+  const sets: unknown[] = []
   on('command.run', () => ({ text: '' }))
+  on('config.list', () => ({ value: rows }) as never)
+  on('config.set', (_$, e) => {
+    sets.push({ key: e.key, value: e.value })
+    return { value: e.value }
+  })
   // the test kit fills the engine-stamped fields (origin, presentation)
   const run = (args: string) =>
     $.command.run({ command: 'token-weather', args } as Parameters<typeof $.command.run>[0])
 
   const { text } = await run('')
-  expect(text).toContain('› weather')
-  expect(text).toContain('moon')
-  const bad = await run('sauna')
-  expect(bad.text).toContain('Unknown analogy "sauna"')
+  expect(text).toContain('analogy  ›weather')
+  expect(text).toContain('cache    ›full  compact  off')
+  expect(text).toContain('ttl      ›1h  5m')
+
+  expect((await run('cache compact')).text).toBe('token-weather cache is now compact.')
+  expect((await run('ttl 5m')).text).toBe('token-weather ttl is now 5m.')
+  expect((await run('moon')).text).toBe('token-weather analogy is now moon.')
+  expect((await run('off')).text).toBe('token-weather cache is now off.')
+  expect((await run('cache full')).text).toBe('token-weather cache is already full.')
+  expect(sets).toEqual([
+    { key: 'token-weather@inline.cache', value: 'compact' },
+    { key: 'token-weather@inline.cacheTtl', value: '5m' },
+    { key: 'token-weather@inline.analogy', value: 'moon' },
+    { key: 'token-weather@inline.cache', value: 'off' },
+  ])
+  expect((await run('sauna')).text).toContain('Unknown "sauna"')
+  expect((await run('ttl 2h')).text).toBe('Unknown ttl "2h". Pick one of: 1h, 5m')
 })
 
 const STEP = { turnId: 't', index: 0, model: 'm', messageCount: 1 } as const

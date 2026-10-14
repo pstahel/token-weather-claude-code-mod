@@ -2,8 +2,8 @@ import type { CacheReading } from '../types'
 import { fmt } from './forecast'
 
 export type CacheMode = 'off' | 'compact' | 'full'
-export const CACHE_MODES: readonly CacheMode[] = ['off', 'compact', 'full']
-export const TTLS = { '5m': 5, '1h': 60 } as const
+export const CACHE_MODES: readonly CacheMode[] = ['full', 'compact', 'off']
+export const TTLS = { '1h': 60, '5m': 5 } as const
 export type Ttl = keyof typeof TTLS
 
 const MINUTE = 60_000
