@@ -1,7 +1,7 @@
 {
   "name": "token-weather",
-  "version": "0.2.0",
-  "description": "A live forecast of your context window, shown above the prompt, in the analogy you pick",
+  "version": "0.3.0",
+  "description": "A live forecast of your context window and prompt cache, shown above the prompt, in the analogy you pick",
   "types": "./types/index.d.ts",
   "author": {
     "name": "Patric Stahel"
@@ -12,7 +12,37 @@
       "title": "Analogy",
       "description": "How the band pictures the context fill: weather, moon, hearts, fuel, pot, tide, daytime or volcano",
       "default": "weather",
-      "options": ["weather", "moon", "hearts", "fuel", "pot", "tide", "daytime", "volcano"]
+      "options": [
+        "weather",
+        "moon",
+        "hearts",
+        "fuel",
+        "pot",
+        "tide",
+        "daytime",
+        "volcano"
+      ]
+    },
+    "cache": {
+      "type": "string",
+      "title": "Cache row",
+      "description": "Show the prompt cache: full (its own row), compact (appended to the forecast) or off",
+      "default": "full",
+      "options": [
+        "full",
+        "compact",
+        "off"
+      ]
+    },
+    "cacheTtl": {
+      "type": "string",
+      "title": "Cache lifetime",
+      "description": "How long the prompt cache lives after each request: 1h or 5m",
+      "default": "1h",
+      "options": [
+        "1h",
+        "5m"
+      ]
     }
   }
 }
