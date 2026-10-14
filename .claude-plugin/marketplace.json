@@ -1,0 +1,13 @@
+{
+  "name": "token-weather",
+  "description": "Claude Code mods by Patric Stahel",
+  "owner": {
+    "name": "Patric Stahel"
+  },
+  "plugins": [
+    {
+      "name": "token-weather",
+      "source": "./"
+    }
+  ]
+}
