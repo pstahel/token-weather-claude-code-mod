@@ -109,8 +109,6 @@ claude plugin install token-weather --marketplace pstahel/token-weather-claude-c
 
 In the desktop app, where `/plugin` does not run: click **+** next to the prompt box, then **Plugins**, **Add marketplace** with `pstahel/token-weather-claude-code-mod`, then **Add plugin**.
 
-This repository is private: installing needs a git credential for github.com on your machine (an SSH key, or `gh auth login` then `gh auth setup-git`).
-
 ## Develop
 
 ```
@@ -130,3 +128,7 @@ To try changes live, load the folder as a dev plugin: `claude --plugin-dir .` in
 | `hooks/register.tsx` | the hooks and the drawing |
 
 A new analogy goes into `ANALOGIES`, into `WORDS` for every language, and into `userConfig.analogy.options` in `.claude-plugin/plugin.json`; a new language into `LANGS`, `PHRASES`, `WORDS` and `userConfig.language.options`.
+
+## License
+
+MIT, see [LICENSE](LICENSE).

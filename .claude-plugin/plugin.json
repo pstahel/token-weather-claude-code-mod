@@ -57,5 +57,7 @@
         "fr"
       ]
     }
-  }
+  },
+  "license": "MIT",
+  "repository": "https://github.com/pstahel/token-weather-claude-code-mod"
 }
